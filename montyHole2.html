@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>モンティ・ホール高速シミュレーター</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --accent-color: #3498db;
+            --accent-dark: #2980b9;
+            --text-main: #333;
+            --text-sub: #666;
+            --win-color: #2ecc71;
+            --lose-color: #e74c3c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 設定カード */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        select, .radio-group {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+        .radio-label {
+            flex: 1;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .radio-label input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .radio-btn-design {
+            display: block;
+            padding: 12px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #aaa;
+            transition: all 0.2s;
+        }
+
+        /* ラジオボタン選択時のスタイル */
+        .radio-label input:checked + .radio-btn-design {
+            border-color: var(--accent-color);
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--accent-color);
+        }
+
+        button.run-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
+        }
+
+        button.run-btn:hover {
+            background-color: var(--accent-dark);
+        }
+
+        button.run-btn:active {
+            transform: translateY(2px);
+        }
+
+        button.run-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 結果エリア */
+        .result-area {
+            display: none; /* 初期状態は非表示 */
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .result-area.show {
+            display: block;
+            opacity: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-item label {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .win-rate-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .rate-large {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            line-height: 1;
+        }
+        .rate-label {
+            font-size: 1rem;
+            color: var(--text-sub);
+        }
+
+        /* プログレスバー（グラフ） */
+        .bar-container {
+            height: 24px;
+            background-color: #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* ログエリア */
+        .log-area {
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #999;
+            height: 30px;
+            overflow: hidden;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>モンティ・ホール高速シミュレーター</h1>
+
+    <div class="container">
+        <div class="card">
+            <div class="form-group">
+                <label for="iterations">試行回数（シミュレーション回数）</label>
+                <select id="iterations">
+                    <option value="10" selected>10回</option>
+                    <option value="100">100回</option>
+                    <option value="1000">1,000回</option>
+                    <option value="10000">10,000回</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>あなたの戦略（変える？変えない？）</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="strategy" value="stay" checked>
+                        <span class="radio-btn-design">変えない<br>(Stay)</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="strategy" value="switch">
+                        <span class="radio-btn-design">変える<br>(Switch)</span>
+                    </label>
+                </div>
+            </div>
+
+            <button class="run-btn" onclick="runSimulation()">シミュレーション開始</button>
+        </div>
+
+        <div class="card result-area" id="result-card">
+            <div class="win-rate-display">
+                <div class="rate-label">勝率</div>
+                <div class="rate-large" id="result-rate">0.0%</div>
+            </div>
+
+            <div style="position: relative; margin-bottom: 30px;">
+                <div class="bar-container">
+                    <div class="bar-fill" id="result-bar"></div>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <label>勝ち（車🚗）</label>
+                    <div class="stat-value" id="result-wins" style="color: var(--win-color);">0</div>
+                </div>
+                <div class="stat-item">
+                    <label>負け（ヤギ🐐）</label>
+                    <div class="stat-value" id="result-losses" style="color: var(--lose-color);">0</div>
+                </div>
+            </div>
+            
+            <div class="log-area" id="sim-log">
+                </div>
+        </div>
+    </div>
+
+<script>
+    function runSimulation() {
+        // UI要素の取得
+        const iterationsSelect = document.getElementById('iterations');
+        const strategyRadios = document.getElementsByName('strategy');
+        const resultCard = document.getElementById('result-card');
+        const btn = document.querySelector('.run-btn');
+        const logArea = document.getElementById('sim-log');
+
+        // 設定値の取得
+        const N = parseInt(iterationsSelect.value);
+        let strategy = 'stay'; // デフォルト値もstayに合わせて初期化
+        for(const radio of strategyRadios) {
+            if(radio.checked) strategy = radio.value;
+        }
+
+        // UIリセット
+        btn.disabled = true;
+        btn.textContent = "計算中...";
+        resultCard.classList.remove('show');
+        logArea.innerHTML = "シミュレーション準備中...";
+
+        // 少しだけ遅延させて計算中の演出を入れる
+        setTimeout(() => {
+            let wins = 0;
+            
+            // シミュレーション実行ループ
+            for(let i = 0; i < N; i++) {
+                const prizeDoor = Math.floor(Math.random() * 3);
+                const initialChoice = Math.floor(Math.random() * 3);
+
+                let isWin = false;
+
+                if (strategy === 'switch') {
+                    // 【変える戦略】
+                    // 最初に選んだドアが「ハズレ」なら勝ち
+                    if (initialChoice !== prizeDoor) {
+                        isWin = true;
+                    }
+                } else {
+                    // 【変えない戦略】
+                    // 最初に選んだドアが「当たり」なら勝ち
+                    if (initialChoice === prizeDoor) {
+                        isWin = true;
+                    }
+                }
+
+                if (isWin) wins++;
+            }
+
+            // 結果の描画
+            renderResults(N, wins, strategy);
+            
+            // ボタン復帰
+            btn.disabled = false;
+            btn.textContent = "シミュレーション開始";
+
+        }, 300); // 演出用ウェイト
+    }
+
+    function renderResults(total, wins, strategy) {
+        const losses = total - wins;
+        const winRate = (wins / total * 100);
+        
+        const resultCard = document.getElementById('result-card');
+        const resultRate = document.getElementById('result-rate');
+        const resultBar = document.getElementById('result-bar');
+        const resultWins = document.getElementById('result-wins');
+        const resultLosses = document.getElementById('result-losses');
+        const logArea = document.getElementById('sim-log');
+
+        // 数値更新
+        resultWins.textContent = wins.toLocaleString();
+        resultLosses.textContent = losses.toLocaleString();
+        
+        resultRate.textContent = winRate.toFixed(1) + "%";
+
+        // グラフ更新
+        resultBar.style.width = "0%";
+        setTimeout(() => {
+            resultBar.style.width = winRate + "%";
+        }, 100);
+
+        // ログエリア
+        logArea.innerHTML = `計算完了: ${total.toLocaleString()}回の試行を実施しました。`;
+
+        // カード表示
+        resultCard.classList.add('show');
+    }
+</script>
+</body>
+</html>
